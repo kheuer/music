@@ -6,3 +6,6 @@ echo "ade154f733639d52e35e32f5593efe5be76c6d70  fma_small.zip"    | sha1sum -c -
 
 unzip fma_metadata.zip
 unzip fma_small.zip
+
+rm -f data/fma_small/099/099134.mp3
+rm -f data/fma_small/108/108925.mp3
