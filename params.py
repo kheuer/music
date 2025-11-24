@@ -1,5 +1,11 @@
 # audio parameters
 sample_rate = 22050
+clips_per_file = 6  # each file of 30 seconds is split into this many clips.
+seconds_per_clip = 30 / clips_per_file
+assert seconds_per_clip >= 2
+assert not (
+    661560 / clips_per_file % 10
+)  # ensure that each sampled clip can be cut off cleanly
 
 # dataset split parameters
 test_size = 0.2
