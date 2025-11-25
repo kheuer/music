@@ -1,4 +1,4 @@
-# Retrieval Model Kit
+# Music Genre Classification
 
 For this project, Python 3.10 is required.
 
