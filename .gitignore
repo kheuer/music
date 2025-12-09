@@ -1,5 +1,4 @@
 data/fma_metadata/*
 data/fma_small/*
 *.pyc
-data.csv
-audio.npy
+cache/*

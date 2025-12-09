@@ -4,4 +4,6 @@ pandas
 matplotlib
 tqdm
 IPython
-sklearn
+scikit-learn
+tensorflow[and-cuda]
+seaborn
