@@ -4,13 +4,13 @@
 - 10 Sekunden
 - 30 Sekunden
 ### Features
-- static feature vector (5*6) (centroid, bandwidth, rolloff, contrast, flatness) -> mean, std dev, min, max, unteres quartil, oberes quartil
-- complete feature vector (centroid, bandwidth, contrast, flatness, (tempo))
+- spectral feature vector (5*6) (centroid, bandwidth, rolloff, contrast, flatness) -> mean, std dev, min, max, unteres quartil, oberes quartil
+- tempo feature vector (5*6) (centroid (tempo), bandwidth, contrast, flatness) -> erst mitteln dann Features
+- (complete feature vector (centroid, bandwidth, contrast, flatness, (tempo)))
 - MelSpectogram
 - Chromagram
-- Tempogram
 ### Models / Architecture
-- SVM
+- Traditional: SVM, Random Forest
 - Simple feedforward 
 - DenseNet
-- ResNet
+- (ResNet)
