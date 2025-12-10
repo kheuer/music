@@ -1,9 +1,4 @@
-### Models / Architecture (3)
-- SVM
-- Simple feedforward 
-- DenseNet
-- ResNet
-### Datasplit (duration of samples)
+### Datasplit (duration of samples) from SmallFMA
 - 3 Sekunden
 - 5 Sekunden
 - 10 Sekunden
@@ -14,3 +9,8 @@
 - MelSpectogram
 - Chromagram
 - Tempogram
+### Models / Architecture
+- SVM
+- Simple feedforward 
+- DenseNet
+- ResNet
