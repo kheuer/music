@@ -4,7 +4,7 @@
 - 10 Sekunden
 - 30 Sekunden
 ### Features
-- static feature vector (24 (4*6) + 1) (centroid, bandwidth, contrast, flatness, (tempo)) -> mean, std dev, min, max, unteres quartil, oberes quartil
+- static feature vector (5*6) (centroid, bandwidth, rolloff, contrast, flatness) -> mean, std dev, min, max, unteres quartil, oberes quartil
 - complete feature vector (centroid, bandwidth, contrast, flatness, (tempo))
 - MelSpectogram
 - Chromagram
