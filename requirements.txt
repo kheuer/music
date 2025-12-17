@@ -7,3 +7,4 @@ IPython
 scikit-learn
 tensorflow[and-cuda]
 seaborn
+ipykernel
