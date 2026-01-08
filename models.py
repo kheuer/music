@@ -5,10 +5,13 @@ import numpy as np
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import confusion_matrix
+from sklearn import svm
+from sklearn.ensemble import RandomForestClassifier
 import tensorflow as tf
 from tensorflow.keras import layers, models
 
-assert len(tf.config.list_physical_devices("GPU"))
+if not len(tf.config.list_physical_devices("GPU")):
+    print("No GPU found. Using CPU.")
 
 from data import get_train_test_val_features_and_targets, unique_genres, n_genres
 from utils import LivePlot
@@ -150,3 +153,18 @@ def create_simple_feedforward_model(
     out = tf.keras.layers.Dense(n_genres, activation="softmax")(x)
     model = tf.keras.Model(inputs=inp, outputs=out)
     return compile(model, learning_rate)
+
+
+def create_svm() -> svm.SVC:
+    return svm.SVC()
+
+
+def create_random_forest(
+    n_estimators: int = 100, min_samples_split: int = 2, min_samples_leaf: int = 1
+) -> RandomForestClassifier:
+    return RandomForestClassifier(
+        n_estimators=n_estimators,
+        min_samples_split=min_samples_split,
+        min_samples_leaf=min_samples_leaf,
+        random_state=42,
+    )
