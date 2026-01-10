@@ -1,6 +1,7 @@
 import os
 import itertools
 import pandas as pd
+from tqdm import tqdm
 
 from features import (
     compute_chromagram,
@@ -65,7 +66,11 @@ completed = set(
     ].values
 )
 
-for splits, batch_size, lr, feature_extractor, model_creator in combinations:
+unsaved_combinations = [c for c in combinations if c not in completed]
+
+for splits, batch_size, lr, feature_extractor, model_creator in tqdm(
+    unsaved_combinations, total=len(unsaved_combinations)
+):
     if (
         splits,
         batch_size,
@@ -76,7 +81,7 @@ for splits, batch_size, lr, feature_extractor, model_creator in combinations:
         continue
 
     print(f"Running: splits={splits}, batch_size={batch_size}, lr={lr}")
-    model, history, loss, accuracy = pipeline(
+    model, history, loss, segment_accuracy, id_accuracy = pipeline(
         df=df,
         train_size=0.6,
         test_size=0.2,
@@ -87,6 +92,7 @@ for splits, batch_size, lr, feature_extractor, model_creator in combinations:
         batch_size=batch_size,
         earlystop_patience=10,
         learning_rate=lr,
+        plot_confusion_matrix=False,
     )
 
     results_df = pd.concat(
@@ -101,7 +107,8 @@ for splits, batch_size, lr, feature_extractor, model_creator in combinations:
                         "feature_extractor": feature_extractor.__name__,
                         "model_creator": model_creator.__name__,
                         "loss": loss,
-                        "accuracy": accuracy,
+                        "segment_accuracy": segment_accuracy,
+                        "id_accuracy": id_accuracy,
                     }
                 ]
             ),

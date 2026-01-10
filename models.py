@@ -1,4 +1,6 @@
+import os
 from typing import Callable
+from collections import Counter
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
@@ -16,6 +18,29 @@ if not len(tf.config.list_physical_devices("GPU")):
 from data import get_train_test_val_features_and_targets, unique_genres, n_genres
 from utils import LivePlot
 
+os.makedirs("imgs", exist_ok=True)
+
+
+def majority_vote_by_id(y_true, y_pred, ids):
+    """
+    calculates the accuracy using average prediction across music tracks
+    """
+    id_to_true = {}
+    id_to_preds = {}
+
+    for yt, yp, i in zip(y_true, y_pred, ids):
+        id_to_preds.setdefault(i, []).append(yp)
+        id_to_true[i] = yt  # same label for all segments of an id
+
+    y_true_ids = []
+    y_pred_ids = []
+
+    for i in id_to_preds:
+        y_true_ids.append(id_to_true[i])
+        y_pred_ids.append(Counter(id_to_preds[i]).most_common(1)[0][0])
+
+    return np.mean(np.array(y_true_ids) == np.array(y_pred_ids))
+
 
 def pipeline(
     df: pd.DataFrame,
@@ -30,14 +55,16 @@ def pipeline(
     learning_rate: int,
     plot_confusion_matrix: bool = True,
 ):
-    (X_train, y_train), (X_test, y_test), (X_val, y_val) = (
-        get_train_test_val_features_and_targets(
-            df=df,
-            feature_extractor=feature_extractor,
-            splits=splits,
-            train_size=train_size,
-            test_size=test_size,
-        )
+    (
+        (X_train, y_train, ids_train),
+        (X_test, y_test, ids_test),
+        (X_val, y_val, ids_val),
+    ) = get_train_test_val_features_and_targets(
+        df=df,
+        feature_extractor=feature_extractor,
+        splits=splits,
+        train_size=train_size,
+        test_size=test_size,
     )
     assert len(X_train) == len(y_train)
     assert len(X_test) == len(y_test)
@@ -94,32 +121,43 @@ def pipeline(
             )
 
         # calculate loss & accuracy
-        logits = model(X_test)
+        logits = model.predict(X_test, batch_size=batch_size)
         y_pred = np.argmax(logits, axis=1)
 
         loss_fn = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
         loss = loss_fn(y_test, logits).numpy()
 
-    accuracy = tf.reduce_mean(tf.cast(y_pred == y_test, tf.float32)).numpy()
+    segment_accuracy = tf.reduce_mean(tf.cast(y_pred == y_test, tf.float32)).numpy()
+    track_accuracy = majority_vote_by_id(y_test, y_pred, ids_test)
 
     # confusion matrix
-    if plot_confusion_matrix:
-        cm = confusion_matrix(y_test, y_pred)
-        plt.figure(figsize=(10, 7))
-        sns.heatmap(
-            cm,
-            annot=True,
-            fmt="d",
-            cmap="Blues",
-            xticklabels=unique_genres,
-            yticklabels=unique_genres,
-        )
+    cm = confusion_matrix(y_test, y_pred)
+    plt.figure(figsize=(10, 7))
+    sns.heatmap(
+        cm,
+        annot=True,
+        fmt="d",
+        cmap="Blues",
+        xticklabels=unique_genres,
+        yticklabels=unique_genres,
+    )
 
-        plt.title(f"Confusion Matrix. Accuracy={accuracy*100:.2f}%")
-        plt.xlabel("Predicted Genre")
-        plt.ylabel("True Genre")
+    plt.title(
+        f"Confusion Matrix. Segment Accuracy={segment_accuracy*100:.2f}% Track Accuracy={track_accuracy*100:.2f}%"
+    )
+    plt.xlabel("Predicted Genre")
+    plt.ylabel("True Genre")
+    plt.savefig(
+        f"imgs/feature_extractor={feature_extractor.__name__}"
+        + f"_model_creator={model_creator.__name__}_epochs_{epochs}"
+        + f"_batch_size={batch_size}_learning_rate={learning_rate}.png"
+    )
+
+    if plot_confusion_matrix:
         plt.show()
-    return model, history, loss, accuracy
+    else:
+        plt.close()
+    return model, history, loss, segment_accuracy, track_accuracy
 
 
 def compile(model: tf.keras.Model, learning_rate: float) -> tf.keras.Model:

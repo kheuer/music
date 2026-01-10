@@ -118,6 +118,7 @@ def build_targets_features(
 
     features = []
     targets = []
+    ids = []
     for _, row in tqdm(
         data.iterrows(), total=len(data), desc=f"Building {desc} dataset"
     ):
@@ -128,15 +129,16 @@ def build_targets_features(
             raw_chunk = raw[i * step : (i + 1) * step]
             features.append(feature_extractor(raw_chunk))
             targets.append(row["genre_id"])
+            ids.append(row["track_id"])
 
     X = np.stack(features)
     y = np.array(targets).flatten()
+    ids = np.array(ids)
 
-    print(len(X), len(data), splits)
     assert len(X) == len(data) * splits
     assert len(y) == len(data) * splits
     idx = np.random.permutation(len(X))
-    return X[idx], y[idx]
+    return X[idx], y[idx], ids[idx]
 
 
 def get_train_test_val_features_and_targets(
@@ -165,14 +167,17 @@ def get_train_test_val_features_and_targets(
             (
                 np.load(os.path.join("cache", identifier, "X_train.npy")),
                 np.load(os.path.join("cache", identifier, "y_train.npy")),
+                np.load(os.path.join("cache", identifier, "ids_train.npy")),
             ),
             (
                 np.load(os.path.join("cache", identifier, "X_test.npy")),
                 np.load(os.path.join("cache", identifier, "y_test.npy")),
+                np.load(os.path.join("cache", identifier, "ids_test.npy")),
             ),
             (
                 np.load(os.path.join("cache", identifier, "X_val.npy")),
                 np.load(os.path.join("cache", identifier, "y_val.npy")),
+                np.load(os.path.join("cache", identifier, "ids_val.npy")),
             ),
         )
 
@@ -182,19 +187,19 @@ def get_train_test_val_features_and_targets(
         )
 
         # create data for model
-        X_train, y_train = build_targets_features(
+        X_train, y_train, ids_train = build_targets_features(
             data=df_train,
             splits=splits,
             feature_extractor=feature_extractor,
             desc="train",
         )
-        X_test, y_test = build_targets_features(
+        X_test, y_test, ids_test = build_targets_features(
             data=df_test,
             splits=splits,
             feature_extractor=feature_extractor,
             desc="test",
         )
-        X_val, y_val = build_targets_features(
+        X_val, y_val, ids_val = build_targets_features(
             data=df_val, splits=splits, feature_extractor=feature_extractor, desc="val"
         )
         assert len(X_train) + len(X_test) + len(X_val) == len(df) * splits
@@ -204,9 +209,16 @@ def get_train_test_val_features_and_targets(
         os.makedirs(os.path.join("cache", identifier))
         np.save(os.path.join("cache", identifier, "X_train.npy"), X_train)
         np.save(os.path.join("cache", identifier, "y_train.npy"), y_train)
+        np.save(os.path.join("cache", identifier, "ids_train.npy"), ids_train)
         np.save(os.path.join("cache", identifier, "X_test.npy"), X_test)
         np.save(os.path.join("cache", identifier, "y_test.npy"), y_test)
+        np.save(os.path.join("cache", identifier, "ids_test.npy"), ids_test)
         np.save(os.path.join("cache", identifier, "X_val.npy"), X_val)
         np.save(os.path.join("cache", identifier, "y_val.npy"), y_val)
+        np.save(os.path.join("cache", identifier, "ids_val.npy"), ids_val)
 
-        return (X_train, y_train), (X_test, y_test), (X_val, y_val)
+        return (
+            (X_train, y_train, ids_train),
+            (X_test, y_test, ids_test),
+            (X_val, y_val, ids_val),
+        )
