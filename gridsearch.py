@@ -81,7 +81,7 @@ for splits, batch_size, lr, feature_extractor, model_creator in tqdm(
         continue
 
     print(f"Running: splits={splits}, batch_size={batch_size}, lr={lr}")
-    model, history, loss, segment_accuracy, id_accuracy = pipeline(
+    model, history, loss, segment_accuracy, track_accuracy = pipeline(
         df=df,
         train_size=0.6,
         test_size=0.2,
@@ -108,7 +108,7 @@ for splits, batch_size, lr, feature_extractor, model_creator in tqdm(
                         "model_creator": model_creator.__name__,
                         "loss": loss,
                         "segment_accuracy": segment_accuracy,
-                        "id_accuracy": id_accuracy,
+                        "track_accuracy": track_accuracy,
                     }
                 ]
             ),
