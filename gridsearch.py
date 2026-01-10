@@ -8,7 +8,12 @@ from features import (
     compute_tempo_features,
     compute_spectral_features,
 )
-from models import create_simple_feedforward_model, pipeline
+from models import (
+    pipeline,
+    create_simple_feedforward_model,
+    create_densenet,
+    create_resnet,
+)
 from data import df
 
 splits_list = [10, 6, 3, 1]
@@ -20,7 +25,11 @@ feature_extractors = [
     compute_mel_spectrogram,
     compute_chromagram,
 ]
-model_creators = [create_simple_feedforward_model]
+model_creators = [
+    create_resnet,
+    create_densenet,
+    create_simple_feedforward_model,
+]
 
 combinations = list(
     itertools.product(

@@ -9,6 +9,7 @@ from sklearn import svm
 from sklearn.ensemble import RandomForestClassifier
 import tensorflow as tf
 from tensorflow.keras import layers, models
+import librosa
 
 if not len(tf.config.list_physical_devices("GPU")):
     print("No GPU found. Using CPU.")
@@ -46,26 +47,26 @@ def pipeline(
     print(f"Test size: {len(X_test)}")
     print(f"Validation size: {len(X_val)}")
 
-    scaler = StandardScaler().fit(X_train)
+    norm = tf.keras.layers.Normalization(axis=(1, 2))
 
-    x_train_transformed = scaler.transform(X_train)
-    x_val_transformed = scaler.transform(X_val)
-    x_test_transformed = scaler.transform(X_test)
+    norm.adapt(X_train[..., np.newaxis])
+    norm.adapt(X_val[..., np.newaxis])
+    norm.adapt(X_test[..., np.newaxis])
 
-    x_train_transformed = tf.convert_to_tensor(x_train_transformed, dtype=tf.float32)
-    y_train = tf.convert_to_tensor(y_train, dtype=tf.int32)
+    tf.convert_to_tensor(X_train, dtype=tf.float32)
+    tf.convert_to_tensor(y_train, dtype=tf.int32)
 
     # create model
-    model = model_creator(n_features=x_train_transformed.shape[1])
+    model = model_creator(X=X_train, learning_rate=learning_rate)
 
     with tf.device("/GPU:0"):
         # fit model
         history = model.fit(
-            x_train_transformed,
+            X_train,
             y_train,
             epochs=epochs,
             batch_size=batch_size,
-            validation_data=(x_val_transformed, y_val),
+            validation_data=(X_val, y_val),
             callbacks=[
                 tf.keras.callbacks.EarlyStopping(
                     monitor="val_accuracy",
@@ -78,7 +79,7 @@ def pipeline(
         )
 
     # calculate loss & accuracy
-    logits = model(x_test_transformed)
+    logits = model(X_test)
     y_pred = np.argmax(logits, axis=1)
 
     loss_fn = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
@@ -128,23 +129,54 @@ def create_densenet(input_shape: tuple, learning_rate: float) -> tf.keras.Model:
     return compile(model, learning_rate)
 
 
-def create_resnet(input_shape: tuple, learning_rate: float) -> tf.keras.Model:
-    base_model = tf.keras.applications.ResNet50V2(
+def create_dense_or_resnet_model(
+    X: np.ndarray, learning_rate: float, base_model: tf.keras.Model
+) -> tf.keras.Model:
+    input_shape = (*X.shape[1:], 1)  # (12, 431, 1)
+    inputs = layers.Input(shape=input_shape)
+
+    # Resize height to meet ResNet constraints
+    x = layers.Resizing(32, 431)(inputs)
+
+    # Adapter to 3 channels
+    x = layers.Conv2D(3, (1, 1), padding="same")(x)
+
+    # Pretrained ResNet
+    base_model = base_model(
         include_top=False,
         weights="imagenet",
-        input_shape=input_shape,
-        name="resnet50v2_base",
     )
     base_model.trainable = False
-    output = layers.Dense(8, activation="softmax")(base_model.output)
-    model = models.Model(inputs=base_model.input, outputs=output)
+
+    x = base_model(x)
+
+    x = layers.GlobalAveragePooling2D()(x)
+    x = layers.Dense(256, activation="relu")(x)
+    x = layers.Dropout(0.5)(x)
+
+    outputs = layers.Dense(n_genres, activation="softmax")(x)
+
+    model = models.Model(inputs, outputs)
     return compile(model, learning_rate)
 
 
+def create_densenet(X: np.ndarray, learning_rate: float) -> tf.keras.Model:
+    return create_dense_or_resnet_model(
+        X=X, learning_rate=learning_rate, base_model=tf.keras.applications.DenseNet121
+    )
+
+
+def create_resnet(X: np.ndarray, learning_rate: float) -> tf.keras.Model:
+    return create_dense_or_resnet_model(
+        X=X, learning_rate=learning_rate, base_model=tf.keras.applications.ResNet50V2
+    )
+
+
 def create_simple_feedforward_model(
-    n_features: int, learning_rate: float
+    X: np.ndarray, learning_rate: float
 ) -> tf.keras.Model:
     """Simple MLP model"""
+    n_features = X.shape[1]
     inp = tf.keras.layers.Input(shape=(n_features,))
     x = tf.keras.layers.Dense(256, activation="relu")(inp)
     x = tf.keras.layers.Dropout(0.5)(x)

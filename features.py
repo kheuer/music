@@ -21,6 +21,7 @@ import params
 from IPython.display import clear_output
 from tensorflow.keras import layers, models
 
+
 def compute_mel_spectrogram(y: np.ndarray, n_mels=40):
     mel_spectrogram = librosa.feature.mfcc(y=y, sr=params.sample_rate, n_mels=n_mels)
     mel_spectrogram_db = librosa.power_to_db(mel_spectrogram, ref=np.max)
@@ -51,11 +52,15 @@ def compute_spectral_flatness(y: np.ndarray):
     spectral_flatness = librosa.feature.spectral_flatness(y=y)
     return spectral_flatness
 
+
 def compute_tempo_features(y: np.ndarray) -> np.ndarray:
     oenv = librosa.onset.onset_strength(y=y)
-    tempogram = librosa.feature.tempogram(onset_envelope= oenv)
+    tempogram = librosa.feature.tempogram(onset_envelope=oenv)
     tempi = librosa.tempo_frequencies(tempogram.shape[0])
-    return tempi[np.argmax(tempogram[5:-5], axis=0)]
+    arr = tempi[np.argmax(tempogram[5:-5], axis=0)]
+    arr[np.isinf(arr)] = np.nan
+    return arr
+
 
 def compute_chromagram(y: np.ndarray):
     return librosa.feature.chroma_stft(y=y)
@@ -85,5 +90,3 @@ def compute_spectral_features(y: np.ndarray) -> np.ndarray:
         ]
     )
     return aggregate(features)
-
-
