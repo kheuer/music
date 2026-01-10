@@ -13,12 +13,14 @@ from models import (
     create_simple_feedforward_model,
     create_densenet,
     create_resnet,
+    create_random_forest,
+    create_svm,
 )
 from data import df
 
 splits_list = [10, 6, 3, 1]
-batch_sizes = [16, 32, 64, 128, 256]
-learning_rates = [0.01, 0.001, 0.0001, 1e-05, 1e-06, 1e-07]
+batch_sizes = [32, 256]
+learning_rates = [0.0001, 1e-06]
 feature_extractors = [
     compute_spectral_features,
     compute_tempo_features,
@@ -26,6 +28,8 @@ feature_extractors = [
     compute_chromagram,
 ]
 model_creators = [
+    create_random_forest,
+    create_svm,
     create_resnet,
     create_densenet,
     create_simple_feedforward_model,

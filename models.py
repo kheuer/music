@@ -3,13 +3,12 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
 import pandas as pd
-from sklearn.preprocessing import StandardScaler
+import sklearn
 from sklearn.metrics import confusion_matrix
 from sklearn import svm
 from sklearn.ensemble import RandomForestClassifier
 import tensorflow as tf
 from tensorflow.keras import layers, models
-import librosa
 
 if not len(tf.config.list_physical_devices("GPU")):
     print("No GPU found. Using CPU.")
@@ -29,6 +28,7 @@ def pipeline(
     batch_size: int,
     earlystop_patience: int,
     learning_rate: int,
+    plot_confusion_matrix: bool = True,
 ):
     (X_train, y_train), (X_test, y_test), (X_val, y_val) = (
         get_train_test_val_features_and_targets(
@@ -53,56 +53,72 @@ def pipeline(
     norm.adapt(X_val[..., np.newaxis])
     norm.adapt(X_test[..., np.newaxis])
 
-    tf.convert_to_tensor(X_train, dtype=tf.float32)
-    tf.convert_to_tensor(y_train, dtype=tf.int32)
-
     # create model
     model = model_creator(X=X_train, learning_rate=learning_rate)
 
-    with tf.device("/GPU:0"):
-        # fit model
-        history = model.fit(
-            X_train,
-            y_train,
-            epochs=epochs,
-            batch_size=batch_size,
-            validation_data=(X_val, y_val),
-            callbacks=[
-                tf.keras.callbacks.EarlyStopping(
-                    monitor="val_accuracy",
-                    patience=earlystop_patience,
-                    restore_best_weights=True,
-                ),
-                LivePlot(logy=True),
-            ],
-            verbose=0,
-        )
+    is_sklearn_model = isinstance(model, sklearn.svm._classes.SVC) or isinstance(
+        model, sklearn.ensemble._forest.RandomForestClassifier
+    )
 
-    # calculate loss & accuracy
-    logits = model(X_test)
-    y_pred = np.argmax(logits, axis=1)
+    if is_sklearn_model:
+        X_train = X_train.reshape(X_train.shape[0], -1)
+        X_val = X_val.reshape(X_val.shape[0], -1)
+        X_test = X_test.reshape(X_test.shape[0], -1)
 
-    loss_fn = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
-    loss = loss_fn(y_test, logits).numpy()
+        model.fit(X_train, y_train)
+        y_pred = model.predict(X_test)
+
+        history, loss = None, None
+
+    else:
+
+        tf.convert_to_tensor(X_train, dtype=tf.float32)
+        tf.convert_to_tensor(y_train, dtype=tf.int32)
+        with tf.device("/GPU:0"):
+            # fit model
+            history = model.fit(
+                X_train,
+                y_train,
+                epochs=epochs,
+                batch_size=batch_size,
+                validation_data=(X_val, y_val),
+                callbacks=[
+                    tf.keras.callbacks.EarlyStopping(
+                        monitor="val_accuracy",
+                        patience=earlystop_patience,
+                        restore_best_weights=True,
+                    ),
+                    LivePlot(logy=True),
+                ],
+                verbose=0,
+            )
+
+        # calculate loss & accuracy
+        logits = model(X_test)
+        y_pred = np.argmax(logits, axis=1)
+
+        loss_fn = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
+        loss = loss_fn(y_test, logits).numpy()
 
     accuracy = tf.reduce_mean(tf.cast(y_pred == y_test, tf.float32)).numpy()
 
     # confusion matrix
-    cm = confusion_matrix(y_test, y_pred)
-    plt.figure(figsize=(10, 7))
-    sns.heatmap(
-        cm,
-        annot=True,
-        fmt="d",
-        cmap="Blues",
-        xticklabels=unique_genres,
-        yticklabels=unique_genres,
-    )
+    if plot_confusion_matrix:
+        cm = confusion_matrix(y_test, y_pred)
+        plt.figure(figsize=(10, 7))
+        sns.heatmap(
+            cm,
+            annot=True,
+            fmt="d",
+            cmap="Blues",
+            xticklabels=unique_genres,
+            yticklabels=unique_genres,
+        )
 
-    plt.title(f"Confusion Matrix. Accuracy={accuracy*100:.2f}%")
-    plt.xlabel("Predicted Genre")
-    plt.ylabel("True Genre")
-    plt.show()
+        plt.title(f"Confusion Matrix. Accuracy={accuracy*100:.2f}%")
+        plt.xlabel("Predicted Genre")
+        plt.ylabel("True Genre")
+        plt.show()
     return model, history, loss, accuracy
 
 
@@ -187,12 +203,15 @@ def create_simple_feedforward_model(
     return compile(model, learning_rate)
 
 
-def create_svm() -> svm.SVC:
+def create_svm(**kwargs) -> svm.SVC:
     return svm.SVC()
 
 
 def create_random_forest(
-    n_estimators: int = 100, min_samples_split: int = 2, min_samples_leaf: int = 1
+    n_estimators: int = 100,
+    min_samples_split: int = 2,
+    min_samples_leaf: int = 1,
+    **kwargs,
 ) -> RandomForestClassifier:
     return RandomForestClassifier(
         n_estimators=n_estimators,
