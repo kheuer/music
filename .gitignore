@@ -2,3 +2,4 @@ data/fma_metadata/*
 data/fma_small/*
 *.pyc
 cache/*
+imgs/*.png

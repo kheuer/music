@@ -106,9 +106,6 @@ def split_dataset(
     df_val = df.iloc[train_size + test_size :]
 
     assert len(df) == len(df_train) + len(df_test) + len(df_val)
-    print(
-        f"Train size: {len(df_train)} Test size: {len(df_test)} Val size: {len(df_val)}"
-    )
     return df_train, df_test, df_val
 
 

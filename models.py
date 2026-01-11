@@ -70,9 +70,6 @@ def pipeline(
     assert len(X_test) == len(y_test)
     assert len(X_val) == len(y_val)
     assert len(X_train) + len(X_test) + len(X_val) == len(df) * splits
-    print(f"Train size: {len(X_train)}")
-    print(f"Test size: {len(X_test)}")
-    print(f"Validation size: {len(X_val)}")
 
     norm = tf.keras.layers.Normalization(axis=(1, 2))
 
@@ -87,18 +84,18 @@ def pipeline(
         model, sklearn.ensemble._forest.RandomForestClassifier
     )
 
-    if is_sklearn_model:
+    # these models require flattened iinputs
+    if is_sklearn_model or (model_creator == create_simple_feedforward_model):
         X_train = X_train.reshape(X_train.shape[0], -1)
         X_val = X_val.reshape(X_val.shape[0], -1)
         X_test = X_test.reshape(X_test.shape[0], -1)
 
+    if is_sklearn_model:
         model.fit(X_train, y_train)
         y_pred = model.predict(X_test)
 
         history, loss = None, None
-
     else:
-
         tf.convert_to_tensor(X_train, dtype=tf.float32)
         tf.convert_to_tensor(y_train, dtype=tf.int32)
         with tf.device("/GPU:0"):
@@ -230,7 +227,7 @@ def create_simple_feedforward_model(
     X: np.ndarray, learning_rate: float
 ) -> tf.keras.Model:
     """Simple MLP model"""
-    n_features = X.shape[1]
+    n_features = np.prod(X.shape[1:])
     inp = tf.keras.layers.Input(shape=(n_features,))
     x = tf.keras.layers.Dense(256, activation="relu")(inp)
     x = tf.keras.layers.Dropout(0.5)(x)
