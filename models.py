@@ -11,6 +11,8 @@ from sklearn import svm
 from sklearn.ensemble import RandomForestClassifier
 import tensorflow as tf
 from tensorflow.keras import layers, models
+from tensorflow.keras.applications.resnet import preprocess_input
+
 
 if not len(tf.config.list_physical_devices("GPU")):
     print("No GPU found. Using CPU.")
@@ -167,30 +169,18 @@ def compile(model: tf.keras.Model, learning_rate: float) -> tf.keras.Model:
     return model
 
 
-def create_densenet(input_shape: tuple, learning_rate: float) -> tf.keras.Model:
-    base_model = tf.keras.applications.DenseNet201(
-        include_top=False,
-        weights="imagenet",
-        input_shape=input_shape,
-        name="densenet201",
-    )
-    base_model.trainable = False
-    output = layers.Dense(8, activation="softmax")(base_model.output)
-    model = models.Model(inputs=base_model.input, outputs=output)
-    return compile(model, learning_rate)
-
-
-def create_dense_or_resnet_model(
+def _create_dense_or_resnet_model(
     X: np.ndarray, learning_rate: float, base_model: tf.keras.Model
 ) -> tf.keras.Model:
     input_shape = (*X.shape[1:], 1)  # (12, 431, 1)
     inputs = layers.Input(shape=input_shape)
 
     # Resize height to meet ResNet constraints
-    x = layers.Resizing(32, 431)(inputs)
+    x = layers.Resizing(224, 224)(inputs)
 
     # Adapter to 3 channels
     x = layers.Conv2D(3, (1, 1), padding="same")(x)
+    x = layers.Lambda(preprocess_input)(x)
 
     # Pretrained ResNet
     base_model = base_model(
@@ -198,6 +188,10 @@ def create_dense_or_resnet_model(
         weights="imagenet",
     )
     base_model.trainable = False
+    for layer in base_model.layers[-10:]:
+        layer.trainable = True
+    for layer in base_model.layers[:10]:
+        layer.trainable = True
 
     x = base_model(x)
 
@@ -212,13 +206,13 @@ def create_dense_or_resnet_model(
 
 
 def create_densenet(X: np.ndarray, learning_rate: float) -> tf.keras.Model:
-    return create_dense_or_resnet_model(
+    return _create_dense_or_resnet_model(
         X=X, learning_rate=learning_rate, base_model=tf.keras.applications.DenseNet121
     )
 
 
 def create_resnet(X: np.ndarray, learning_rate: float) -> tf.keras.Model:
-    return create_dense_or_resnet_model(
+    return _create_dense_or_resnet_model(
         X=X, learning_rate=learning_rate, base_model=tf.keras.applications.ResNet50V2
     )
 

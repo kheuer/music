@@ -58,7 +58,7 @@ def compute_tempo_features(y: np.ndarray) -> np.ndarray:
     tempogram = librosa.feature.tempogram(onset_envelope=oenv)
     tempi = librosa.tempo_frequencies(tempogram.shape[0])
     arr = tempi[np.argmax(tempogram[5:-5], axis=0)]
-    arr[np.isinf(arr)] = np.nan
+    arr[np.isinf(arr)] = 0
     return arr
 
 

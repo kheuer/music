@@ -66,11 +66,9 @@ completed = set(
     ].values
 )
 
-unsaved_combinations = [c for c in combinations if c not in completed]
 
-for splits, batch_size, lr, feature_extractor, model_creator in tqdm(
-    unsaved_combinations, total=len(unsaved_combinations)
-):
+unsaved_combinations = []
+for splits, batch_size, lr, feature_extractor, model_creator in combinations:
     if (
         splits,
         batch_size,
@@ -79,6 +77,26 @@ for splits, batch_size, lr, feature_extractor, model_creator in tqdm(
         model_creator.__name__,
     ) in completed:
         continue
+    elif model_creator in (create_random_forest, create_svm) and (
+        (
+            splits,
+            batch_sizes[0],
+            learning_rates[0],
+            feature_extractor.__name__,
+            model_creator.__name__,
+        )
+        in completed
+    ):
+        # these models ignore batch size and learning rate, no need to recalculate those combinations
+        continue
+    unsaved_combinations.append(
+        (splits, batch_size, lr, feature_extractor, model_creator)
+    )
+
+
+for splits, batch_size, lr, feature_extractor, model_creator in tqdm(
+    unsaved_combinations, total=len(unsaved_combinations), desc="Gridsearch Loop"
+):
 
     print(
         f"Running: splits={splits}, batch_size={batch_size}, lr={lr}, feature_extractor={feature_extractor.__name__}, model_creator={model_creator.__name__}"
