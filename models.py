@@ -12,6 +12,7 @@ from sklearn.ensemble import RandomForestClassifier
 import tensorflow as tf
 from tensorflow.keras import layers, models
 from tensorflow.keras.applications.resnet import preprocess_input
+from features import compute_tempo_features, compute_mel_spectrogram, compute_chromagram
 
 
 if not len(tf.config.list_physical_devices("GPU")):
@@ -74,11 +75,17 @@ def pipeline(
     assert len(X_val) == len(y_val)
     assert len(X_train) + len(X_test) + len(X_val) == len(df) * splits
 
-    norm = tf.keras.layers.Normalization(axis=(1, 2))
+    def norm(X):
+        return (X - np.mean(X, axis=0)) / np.std(X, axis=0)
 
-    norm.adapt(X_train[..., np.newaxis])
-    norm.adapt(X_val[..., np.newaxis])
-    norm.adapt(X_test[..., np.newaxis])
+    if feature_extractor in (
+        compute_tempo_features,
+        compute_mel_spectrogram,
+        compute_chromagram,
+    ):
+        X_train = norm(X_train)
+        X_val = norm(X_val)
+        X_test = norm(X_test)
 
     # create model
     model = model_creator(X=X_train, learning_rate=learning_rate)
@@ -195,8 +202,6 @@ def _create_dense_or_resnet_model(
     base_model.trainable = False
     for layer in base_model.layers[-10:]:
         layer.trainable = True
-    for layer in base_model.layers[:10]:
-        layer.trainable = True
 
     x = base_model(x)
 
@@ -228,7 +233,9 @@ def create_simple_feedforward_model(
     """Simple MLP model"""
     n_features = np.prod(X.shape[1:])
     inp = tf.keras.layers.Input(shape=(n_features,))
-    x = tf.keras.layers.Dense(256, activation="relu")(inp)
+    x = tf.keras.layers.Dense(1024, activation="relu")(inp)
+    x = tf.keras.layers.Dense(512, activation="relu")(x)
+    x = tf.keras.layers.Dense(256, activation="relu")(x)
     x = tf.keras.layers.Dropout(0.5)(x)
     x = tf.keras.layers.Dense(128, activation="relu")(x)
     x = tf.keras.layers.Dropout(0.5)(x)
