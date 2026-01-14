@@ -81,7 +81,7 @@ def pipeline(
     assert len(X_val) == len(y_val)
     assert len(X_train) + len(X_test) + len(X_val) == len(df) * splits
 
-    def norm(X, feature_extractor):
+    def norm(X):
         if feature_extractor in (compute_mel_spectrogram, compute_chromagram):
             X_shaped = X.transpose(0, 2, 1).reshape(-1, X.shape[1])
             scaler = StandardScaler()
