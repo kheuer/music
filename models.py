@@ -9,10 +9,16 @@ import sklearn
 from sklearn.metrics import confusion_matrix, recall_score, f1_score
 from sklearn import svm
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.preprocessing import StandardScaler
 import tensorflow as tf
 from tensorflow.keras import layers, models
 from tensorflow.keras.applications.resnet import preprocess_input
-from features import compute_tempo_features, compute_mel_spectrogram, compute_chromagram
+from features import (
+    compute_tempo_features,
+    compute_mel_spectrogram,
+    compute_chromagram,
+    compute_spectral_features,
+)
 
 
 if not len(tf.config.list_physical_devices("GPU")):
@@ -75,17 +81,34 @@ def pipeline(
     assert len(X_val) == len(y_val)
     assert len(X_train) + len(X_test) + len(X_val) == len(df) * splits
 
-    def norm(X):
-        return (X - np.mean(X, axis=0)) / np.std(X, axis=0)
+    def norm(X, feature_extractor):
+        if feature_extractor in (compute_mel_spectrogram, compute_chromagram):
+            X_shaped = X.transpose(0, 2, 1).reshape(-1, X.shape[1])
+            scaler = StandardScaler()
+            X_norm = scaler.fit_transform(X_shaped)
+            X_rescaled = X_norm.reshape(X.shape).transpose(0, 1, 2)
+            assert X.shape == X_rescaled.shape
+        elif feature_extractor == compute_tempo_features:
+            scaler = StandardScaler()
+            X_rescaled = scaler.fit_transform(X)
+            assert X.shape == X_rescaled.shape
+        elif feature_extractor == compute_spectral_features:
+            scaler = StandardScaler()
+            n_samples, dim1, dim2 = X.shape
+            X_shaped = X.reshape(n_samples, dim1 * dim2)
+            X_norm = scaler.fit_transform(X_shaped)
+            X_rescaled = X_norm.reshape(n_samples, dim1, dim2)
+            assert X.shape == X_rescaled.shape
+        return X_rescaled
 
-    if feature_extractor in (
-        compute_tempo_features,
-        compute_mel_spectrogram,
-        compute_chromagram,
-    ):
-        X_train = norm(X_train)
-        X_val = norm(X_val)
-        X_test = norm(X_test)
+    # if feature_extractor in (
+    #     compute_tempo_features,
+    #     compute_mel_spectrogram,
+    #     compute_chromagram,
+    # ):
+    X_train = norm(X_train)
+    X_val = norm(X_val)
+    X_test = norm(X_test)
 
     # create model
     model = model_creator(X=X_train, learning_rate=learning_rate)

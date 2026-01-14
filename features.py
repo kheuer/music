@@ -57,9 +57,13 @@ def compute_tempo_features(y: np.ndarray) -> np.ndarray:
     oenv = librosa.onset.onset_strength(y=y)
     tempogram = librosa.feature.tempogram(onset_envelope=oenv)
     tempi = librosa.tempo_frequencies(tempogram.shape[0])
-    arr = tempi[np.argmax(tempogram[5:-5], axis=0)]
-    arr[np.isinf(arr)] = 0
-    return arr[..., np.newaxis]
+    if tempogram.shape[0] > 10:
+        idx = np.argmax(tempogram[5:-5], axis=0) + 5
+    else:
+        idx = np.argmax(tempogram, axis=0)
+    arr = tempi[idx]
+    arr[np.isinf(arr)] = np.nan
+    return nan_aggregate(arr)
 
 
 def compute_chromagram(y: np.ndarray):
@@ -77,6 +81,23 @@ def aggregate(y: np.ndarray) -> np.ndarray:
         np.std(y, axis=1),
     ]
     return np.vstack(aggregated_features)
+
+
+def nan_aggregate(y: np.ndarray) -> np.ndarray:
+    if np.isnan(y).all():
+        print("All values are NaN!")
+        print(y)
+    return np.array(
+        [
+            np.nanmin(y),
+            np.nanquantile(y, 0.25),
+            np.nanmean(y),
+            np.nanmedian(y),
+            np.nanquantile(y, 0.75),
+            np.nanmax(y),
+            np.nanstd(y),
+        ]
+    )
 
 
 def compute_spectral_features(y: np.ndarray) -> np.ndarray:
