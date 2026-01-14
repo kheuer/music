@@ -14,3 +14,15 @@ During development we will add dependencies to get these, simply re-run
 ```
 pip install -r requirements.txt
 ```
+
+When using Windows you can execute the following lines to download the files (you need Git Bash installed for this solution):
+```
+import subprocess
+bash_path = r"C:\Program Files\Git\git-bash.exe" # installation path of git-bash.exe
+sh_file = r"...\music\data\download.sh"
+```
+
+If there is an issue during loading all the files (NoBackendError from librosa):
+```
+conda install -c conda-forge ffmpeg audioread -y
+```
