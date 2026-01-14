@@ -366,7 +366,7 @@ def create_complex_feedforward_model(
 
 
 def create_svm(**kwargs) -> svm.SVC:
-    return svm.SVC(**kwargs)
+    return svm.SVC()
 
 
 def create_random_forest(
