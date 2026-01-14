@@ -88,7 +88,7 @@ class LivePlot(tf.keras.callbacks.Callback):
 
 
 def show_mel_spectrogram(index: int):
-    mel_spectrogram = librosa.feature.mfcc(
+    mel_spectrogram = librosa.feature.melspectrogram(
         y=load_file(df.loc[index, "path"]), sr=params.sample_rate, n_mels=40
     )
     mel_spectrogram_db = librosa.power_to_db(mel_spectrogram, ref=np.max)

@@ -23,7 +23,9 @@ from tensorflow.keras import layers, models
 
 
 def compute_mel_spectrogram(y: np.ndarray, n_mels=40):
-    mel_spectrogram = librosa.feature.mfcc(y=y, sr=params.sample_rate, n_mels=n_mels)
+    mel_spectrogram = librosa.feature.melspectrogram(
+        y=y, sr=params.sample_rate, n_mels=n_mels
+    )
     mel_spectrogram_db = librosa.power_to_db(mel_spectrogram, ref=np.max)
     return mel_spectrogram_db
 
@@ -124,9 +126,15 @@ def norm(X: np.ndarray, feature_extractor: Callable):
         X_rescaled = scaler.fit_transform(X)
     elif feature_extractor == compute_spectral_features:
         scaler = StandardScaler()
-        n_samples, dim1, dim2 = X.shape
-        X_shaped = X.reshape(n_samples, dim1 * dim2)
+        if len(X.shape) == 3:
+            n_samples, dim1, dim2 = X.shape
+            X_shaped = X.reshape(n_samples, dim1 * dim2)
+        else:
+            X_shaped = X
         X_norm = scaler.fit_transform(X_shaped)
-        X_rescaled = X_norm.reshape(n_samples, dim1, dim2)
+        if len(X.shape) == 3:
+            X_rescaled = X_norm.reshape(n_samples, dim1, dim2)
+        else:
+            X_rescaled = X_norm
     assert X.shape == X_rescaled.shape
     return X_rescaled
