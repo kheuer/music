@@ -54,8 +54,11 @@ else:
             "learning_rate",
             "feature_extractor",
             "model_creator",
-            "accuracy",
             "loss",
+            "segment_accuracy",
+            "track_accuracy",
+            "recall",
+            "f1",
         ]
     )
 
@@ -77,18 +80,14 @@ for splits, batch_size, lr, feature_extractor, model_creator in combinations:
         model_creator.__name__,
     ) in completed:
         continue
-    elif model_creator in (create_random_forest, create_svm) and (
-        (
-            splits,
-            batch_sizes[0],
-            learning_rates[0],
-            feature_extractor.__name__,
-            model_creator.__name__,
-        )
-        in completed
+    elif (
+        model_creator in (create_random_forest, create_svm)
+        and (batch_size != batch_sizes[0])
+        and (learning_rates != learning_rates[0])
     ):
         # these models ignore batch size and learning rate, no need to recalculate those combinations
         continue
+
     unsaved_combinations.append(
         (splits, batch_size, lr, feature_extractor, model_creator)
     )
@@ -101,7 +100,7 @@ for splits, batch_size, lr, feature_extractor, model_creator in tqdm(
     print(
         f"Running: splits={splits}, batch_size={batch_size}, lr={lr}, feature_extractor={feature_extractor.__name__}, model_creator={model_creator.__name__}"
     )
-    model, history, loss, segment_accuracy, track_accuracy = pipeline(
+    model, history, loss, segment_accuracy, track_accuracy, recall, f1 = pipeline(
         df=df,
         train_size=0.6,
         test_size=0.2,
@@ -129,6 +128,8 @@ for splits, batch_size, lr, feature_extractor, model_creator in tqdm(
                         "loss": loss,
                         "segment_accuracy": segment_accuracy,
                         "track_accuracy": track_accuracy,
+                        "recall": recall,
+                        "f1": f1,
                     }
                 ]
             ),

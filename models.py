@@ -6,7 +6,7 @@ import seaborn as sns
 import numpy as np
 import pandas as pd
 import sklearn
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import confusion_matrix, recall_score, f1_score
 from sklearn import svm
 from sklearn.ensemble import RandomForestClassifier
 import tensorflow as tf
@@ -56,6 +56,7 @@ def pipeline(
     earlystop_patience: int,
     learning_rate: int,
     plot_confusion_matrix: bool = True,
+    liveplot_training: bool = False,
 ):
     (
         (X_train, y_train, ids_train),
@@ -86,7 +87,7 @@ def pipeline(
         model, sklearn.ensemble._forest.RandomForestClassifier
     )
 
-    # these models require flattened iinputs
+    # these models require flattened inputs
     if is_sklearn_model or (model_creator == create_simple_feedforward_model):
         X_train = X_train.reshape(X_train.shape[0], -1)
         X_val = X_val.reshape(X_val.shape[0], -1)
@@ -98,8 +99,17 @@ def pipeline(
 
         history, loss = None, None
     else:
-        tf.convert_to_tensor(X_train, dtype=tf.float32)
-        tf.convert_to_tensor(y_train, dtype=tf.int32)
+        X_train = tf.convert_to_tensor(X_train, dtype=tf.float32)
+        y_train = tf.convert_to_tensor(y_train, dtype=tf.int32)
+        callbacks = [
+            tf.keras.callbacks.EarlyStopping(
+                monitor="val_accuracy",
+                patience=earlystop_patience,
+                restore_best_weights=True,
+            )
+        ]
+        if liveplot_training:
+            callbacks.append(LivePlot(logy=True))
         with tf.device("/GPU:0"):
             # fit model
             history = model.fit(
@@ -108,14 +118,7 @@ def pipeline(
                 epochs=epochs,
                 batch_size=batch_size,
                 validation_data=(X_val, y_val),
-                callbacks=[
-                    tf.keras.callbacks.EarlyStopping(
-                        monitor="val_accuracy",
-                        patience=earlystop_patience,
-                        restore_best_weights=True,
-                    ),
-                    LivePlot(logy=True),
-                ],
+                callbacks=callbacks,
                 verbose=0,
             )
 
@@ -128,6 +131,8 @@ def pipeline(
 
     segment_accuracy = tf.reduce_mean(tf.cast(y_pred == y_test, tf.float32)).numpy()
     track_accuracy = majority_vote_by_id(y_test, y_pred, ids_test)
+    recall = recall_score(y_test, y_pred, average="macro")
+    f1 = f1_score(y_test, y_pred, average="macro")
 
     # confusion matrix
     cm = confusion_matrix(y_test, y_pred)
@@ -156,7 +161,7 @@ def pipeline(
         plt.show()
     else:
         plt.close()
-    return model, history, loss, segment_accuracy, track_accuracy
+    return model, history, loss, segment_accuracy, track_accuracy, recall, f1
 
 
 def compile(model: tf.keras.Model, learning_rate: float) -> tf.keras.Model:
