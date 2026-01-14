@@ -111,3 +111,22 @@ def compute_spectral_features(y: np.ndarray) -> np.ndarray:
         ]
     )
     return aggregate(features)
+
+
+def norm(X: np.ndarray, feature_extractor: Callable):
+    if feature_extractor in (compute_mel_spectrogram, compute_chromagram):
+        X_shaped = X.transpose(0, 2, 1).reshape(-1, X.shape[1])
+        scaler = StandardScaler()
+        X_norm = scaler.fit_transform(X_shaped)
+        X_rescaled = X_norm.reshape(X.shape).transpose(0, 1, 2)
+    elif feature_extractor == compute_tempo_features:
+        scaler = StandardScaler()
+        X_rescaled = scaler.fit_transform(X)
+    elif feature_extractor == compute_spectral_features:
+        scaler = StandardScaler()
+        n_samples, dim1, dim2 = X.shape
+        X_shaped = X.reshape(n_samples, dim1 * dim2)
+        X_norm = scaler.fit_transform(X_shaped)
+        X_rescaled = X_norm.reshape(n_samples, dim1, dim2)
+    assert X.shape == X_rescaled.shape
+    return X_rescaled

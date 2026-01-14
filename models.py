@@ -14,6 +14,7 @@ import tensorflow as tf
 from tensorflow.keras import layers, models
 from tensorflow.keras.applications.resnet import preprocess_input
 from features import (
+    norm,
     compute_tempo_features,
     compute_mel_spectrogram,
     compute_chromagram,
@@ -81,34 +82,9 @@ def pipeline(
     assert len(X_val) == len(y_val)
     assert len(X_train) + len(X_test) + len(X_val) == len(df) * splits
 
-    def norm(X):
-        if feature_extractor in (compute_mel_spectrogram, compute_chromagram):
-            X_shaped = X.transpose(0, 2, 1).reshape(-1, X.shape[1])
-            scaler = StandardScaler()
-            X_norm = scaler.fit_transform(X_shaped)
-            X_rescaled = X_norm.reshape(X.shape).transpose(0, 1, 2)
-            assert X.shape == X_rescaled.shape
-        elif feature_extractor == compute_tempo_features:
-            scaler = StandardScaler()
-            X_rescaled = scaler.fit_transform(X)
-            assert X.shape == X_rescaled.shape
-        elif feature_extractor == compute_spectral_features:
-            scaler = StandardScaler()
-            n_samples, dim1, dim2 = X.shape
-            X_shaped = X.reshape(n_samples, dim1 * dim2)
-            X_norm = scaler.fit_transform(X_shaped)
-            X_rescaled = X_norm.reshape(n_samples, dim1, dim2)
-            assert X.shape == X_rescaled.shape
-        return X_rescaled
-
-    # if feature_extractor in (
-    #     compute_tempo_features,
-    #     compute_mel_spectrogram,
-    #     compute_chromagram,
-    # ):
-    X_train = norm(X_train)
-    X_val = norm(X_val)
-    X_test = norm(X_test)
+    X_train = norm(X_train, feature_extractor=feature_extractor)
+    X_val = norm(X_val, feature_extractor=feature_extractor)
+    X_test = norm(X_test, feature_extractor=feature_extractor)
 
     # create model
     model = model_creator(X=X_train, learning_rate=learning_rate)

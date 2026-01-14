@@ -11,8 +11,8 @@ model, history, loss, segment_accuracy, track_accuracy, recall, f1 = pipeline(
     model_creator=create_simple_feedforward_model,
     epochs=100,
     batch_size=32,
-    earlystop_patience=5,
-    learning_rate=0.001,
+    earlystop_patience=10,
+    learning_rate=0.0001,
     plot_confusion_matrix=True,
     liveplot_training=True,
 )
