@@ -115,26 +115,53 @@ def compute_spectral_features(y: np.ndarray) -> np.ndarray:
     return aggregate(features)
 
 
-def norm(X: np.ndarray, feature_extractor: Callable):
+def norm(
+    X_train: np.ndarray,
+    X_test: np.ndarray,
+    X_val: np.ndarray,
+    feature_extractor: Callable,
+):
     if feature_extractor in (compute_mel_spectrogram, compute_chromagram):
-        X_shaped = X.transpose(0, 2, 1).reshape(-1, X.shape[1])
+        X_train_reshaped = X_train.transpose(0, 2, 1).reshape(-1, X_train.shape[1])
+        X_test_reshaped = X_test.transpose(0, 2, 1).reshape(-1, X_test.shape[1])
+        X_val_reshaped = X_val.transpose(0, 2, 1).reshape(-1, X_val.shape[1])
         scaler = StandardScaler()
-        X_norm = scaler.fit_transform(X_shaped)
-        X_rescaled = X_norm.reshape(X.shape).transpose(0, 1, 2)
+        scaler.fit(X_train_reshaped)
+        X_train_norm = scaler.transform(X_train_reshaped)
+        X_test_norm = scaler.transform(X_test_reshaped)
+        X_val_norm = scaler.transform(X_val_reshaped)
+        X_train_norm = X_train_norm.reshape(X_train.shape).transpose(0, 1, 2)
+        X_test_norm = X_test_norm.reshape(X_test.shape).transpose(0, 1, 2)
+        X_val_norm = X_val_norm.reshape(X_val.shape).transpose(0, 1, 2)
+
     elif feature_extractor == compute_tempo_features:
         scaler = StandardScaler()
-        X_rescaled = scaler.fit_transform(X)
+        scaler.fit(X_train)
+        X_train_norm = scaler.transform(X_train)
+        X_test_norm = scaler.transform(X_test)
+        X_val_norm = scaler.transform(X_val)
+
     elif feature_extractor == compute_spectral_features:
         scaler = StandardScaler()
-        if len(X.shape) == 3:
-            n_samples, dim1, dim2 = X.shape
-            X_shaped = X.reshape(n_samples, dim1 * dim2)
-        else:
-            X_shaped = X
-        X_norm = scaler.fit_transform(X_shaped)
-        if len(X.shape) == 3:
-            X_rescaled = X_norm.reshape(n_samples, dim1, dim2)
-        else:
-            X_rescaled = X_norm
-    assert X.shape == X_rescaled.shape
-    return X_rescaled
+        # expected (n_samples, 7, 11)
+        n_samples, dim1, dim2 = X_train.shape
+        X_train_reshaped = X_train.reshape(n_samples, dim1 * dim2)
+        n_samples, dim1, dim2 = X_test.shape
+        X_test_reshaped = X_test.reshape(n_samples, dim1 * dim2)
+        n_samples, dim1, dim2 = X_val.shape
+        X_val_reshaped = X_val.reshape(n_samples, dim1 * dim2)
+
+        scaler = StandardScaler()
+        scaler.fit(X_train_reshaped)
+        X_train_norm = scaler.transform(X_train_reshaped)
+        X_test_norm = scaler.transform(X_test_reshaped)
+        X_val_norm = scaler.transform(X_val_reshaped)
+        X_train_norm = X_train_norm.reshape(X_train.shape).transpose(0, 1, 2)
+        X_test_norm = X_test_norm.reshape(X_test.shape).transpose(0, 1, 2)
+        X_val_norm = X_val_norm.reshape(X_val.shape).transpose(0, 1, 2)
+
+    assert X_train.shape == X_train_norm.shape
+    assert X_test.shape == X_test_norm.shape
+    assert X_val.shape == X_val_norm.shape
+
+    return (X_train_norm, X_test_norm, X_val_norm)

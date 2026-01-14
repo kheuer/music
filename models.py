@@ -82,9 +82,9 @@ def pipeline(
     assert len(X_val) == len(y_val)
     assert len(X_train) + len(X_test) + len(X_val) == len(df) * splits
 
-    X_train = norm(X_train, feature_extractor=feature_extractor)
-    X_val = norm(X_val, feature_extractor=feature_extractor)
-    X_test = norm(X_test, feature_extractor=feature_extractor)
+    (X_train, X_test, X_val) = norm(
+        X_train=X_train, X_test=X_test, X_val=X_val, feature_extractor=feature_extractor
+    )
 
     # create model
     model = model_creator(X=X_train, learning_rate=learning_rate)
@@ -317,66 +317,15 @@ def create_residual_cnn_model(X: np.ndarray, learning_rate: float) -> tf.keras.M
     return compile(model, learning_rate)
 
 
-def create_complex_feedforward_model(
-    X: np.ndarray, learning_rate: float
-) -> tf.keras.Model:
-    """
-    Complex MLP with residual connections and L2 regularization.
-    Supports 2D (samples, features) or 3D (samples, n_mels, t) input.
-    """
-    l2_reg = tf.keras.regularizers.l2(1e-4)
-
-    if len(X.shape) == 3:
-        n_features = np.prod(X.shape[1:])
-        inp = tf.keras.layers.Input(shape=(X.shape[1], X.shape[2]))
-        x = tf.keras.layers.Flatten()(inp)
-    else:
-        n_features = X.shape[1]
-        inp = tf.keras.layers.Input(shape=(n_features,))
-        x = inp
-
-    dense = tf.keras.layers.Dense(1024, activation="relu", kernel_regularizer=l2_reg)(x)
-    dense = tf.keras.layers.Dropout(0.5)(dense)
-    res = tf.keras.layers.Dense(1024, activation=None, kernel_regularizer=l2_reg)(x)
-    x = tf.keras.layers.Add()([dense, res])
-    x = tf.keras.layers.Activation("relu")(x)
-
-    dense = tf.keras.layers.Dense(1024, activation="relu", kernel_regularizer=l2_reg)(x)
-    dense = tf.keras.layers.Dropout(0.5)(dense)
-    res = tf.keras.layers.Dense(1024, activation=None, kernel_regularizer=l2_reg)(x)
-    x = tf.keras.layers.Add()([dense, res])
-    x = tf.keras.layers.Activation("relu")(x)
-
-    dense = tf.keras.layers.Dense(512, activation="relu", kernel_regularizer=l2_reg)(x)
-    dense = tf.keras.layers.Dense(512, activation="relu", kernel_regularizer=l2_reg)(
-        dense
-    )
-    dense = tf.keras.layers.Dropout(0.5)(dense)
-    res = tf.keras.layers.Dense(512, activation=None, kernel_regularizer=l2_reg)(x)
-    x = tf.keras.layers.Add()([dense, res])
-    x = tf.keras.layers.Activation("relu")(x)
-
-    x = tf.keras.layers.Dense(256, activation="relu", kernel_regularizer=l2_reg)(x)
-    x = tf.keras.layers.Dropout(0.5)(x)
-    x = tf.keras.layers.Dense(128, activation="relu", kernel_regularizer=l2_reg)(x)
-
-    # Output layer
-    out = tf.keras.layers.Dense(
-        n_genres, activation="softmax", kernel_regularizer=l2_reg
-    )(x)
-
-    model = tf.keras.Model(inputs=inp, outputs=out)
-    return compile(model, learning_rate)
-
-
 def create_svm(**kwargs) -> svm.SVC:
-    return svm.SVC()
+    return svm.SVC(**kwargs)
 
 
 def create_random_forest(
     n_estimators: int = 100,
     min_samples_split: int = 2,
     min_samples_leaf: int = 1,
+    max_depth: int = None,
     **kwargs,
 ) -> RandomForestClassifier:
     return RandomForestClassifier(
@@ -384,4 +333,5 @@ def create_random_forest(
         min_samples_split=min_samples_split,
         min_samples_leaf=min_samples_leaf,
         random_state=42,
+        max_depth=max_depth,
     )
