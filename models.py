@@ -11,7 +11,7 @@ from sklearn import svm
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler
 import tensorflow as tf
-from tensorflow.keras import layers, models
+from tensorflow.keras import layers, models, regularizers
 from tensorflow.keras.applications.resnet import preprocess_input
 from features import (
     norm,
@@ -245,6 +245,75 @@ def create_simple_feedforward_model(
 
     out = tf.keras.layers.Dense(n_genres, activation="softmax")(x)
     model = tf.keras.Model(inputs=inp, outputs=out)
+    return compile(model, learning_rate)
+
+
+def create_residual_cnn_model(X: np.ndarray, learning_rate: float) -> tf.keras.Model:
+    # this needs 2d input (+ batch dim)
+    l2_reg = regularizers.l2(1e-4)  # L2 weight decay
+
+    inp = layers.Input(shape=(X.shape[1], X.shape[2], 1))  # add channel dim
+
+    x = inp if len(X.shape) == 3 else x
+
+    # CNN BLOCKS
+    # block 1
+    conv1 = layers.Conv2D(
+        32,
+        kernel_size=(3, 3),
+        padding="same",
+        activation="relu",
+        kernel_regularizer=l2_reg,
+    )(x)
+    conv1 = layers.BatchNormalization()(conv1)
+    conv1 = layers.MaxPooling2D((2, 2))(conv1)
+
+    # block 2
+    conv2 = layers.Conv2D(
+        64,
+        kernel_size=(3, 3),
+        padding="same",
+        activation="relu",
+        kernel_regularizer=l2_reg,
+    )(conv1)
+    conv2 = layers.BatchNormalization()(conv2)
+    conv2 = layers.MaxPooling2D((2, 2))(conv2)
+
+    # block 3
+    conv3 = layers.Conv2D(
+        128,
+        kernel_size=(3, 3),
+        padding="same",
+        activation="relu",
+        kernel_regularizer=l2_reg,
+    )(conv2)
+    conv3 = layers.BatchNormalization()(conv3)
+    conv3 = layers.MaxPooling2D((2, 2))(conv3)
+
+    # flatten CNN output
+    x = layers.GlobalAveragePooling2D()(conv3)
+
+    # DENSE LAYERS
+    # block 1
+    dense = layers.Dense(512, activation="relu", kernel_regularizer=l2_reg)(x)
+    dense = layers.Dropout(0.5)(dense)
+    res = layers.Dense(512, activation=None, kernel_regularizer=l2_reg)(x)
+    x = layers.Add()([dense, res])
+    x = layers.Activation("relu")(x)
+
+    # block 2
+    dense = layers.Dense(256, activation="relu", kernel_regularizer=l2_reg)(x)
+    dense = layers.Dropout(0.5)(dense)
+    res = layers.Dense(256, activation=None, kernel_regularizer=l2_reg)(x)
+    x = layers.Add()([dense, res])
+    x = layers.Activation("relu")(x)
+
+    # block 3
+    x = layers.Dense(128, activation="relu", kernel_regularizer=l2_reg)(x)
+    x = layers.Dropout(0.5)(x)
+
+    out = layers.Dense(n_genres, activation="softmax", kernel_regularizer=l2_reg)(x)
+    model = models.Model(inputs=inp, outputs=out)
     return compile(model, learning_rate)
 
 
