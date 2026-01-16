@@ -195,7 +195,11 @@ def _create_dense_or_resnet_model(
 
     # Resize height to meet ResNet constraints
     x = layers.Resizing(224, 224)(inputs)
-
+    if X.min() < 0:
+        # Mel-spectrogram [-80, 0] → [0,255]
+        print("Rescaling mel-spectrogram input")
+        x = layers.Rescaling(255.0 / 80.0, offset=255.0)(x)
+        # else Chromagram [0,1] → leave as-is
     # Adapter to 3 channels
     x = layers.Conv2D(3, (1, 1), padding="same", trainable=False)(x)
     if base_model == tf.keras.applications.ResNet50V2:
