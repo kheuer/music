@@ -143,3 +143,4 @@ for splits, batch_size, lr, feature_extractor, model_creator in tqdm(
     )
 
     results_df.to_csv(output_file, index=False)
+    results_df.to_excel(output_file.replace(".csv", ".xlsx"), index=False)
