@@ -8,6 +8,7 @@ To setup a python environment, install anaconda, navigate to the projects direct
 conda create --name music python=3.10
 conda activate music
 pip install -r requirements.txt
+sh data/download.sh
 ```
 
 During development we will add dependencies to get these, simply re-run

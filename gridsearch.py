@@ -25,17 +25,17 @@ splits_list = [10, 3]
 batch_sizes = [256]
 learning_rates = [0.0001]
 feature_extractors = [
-    compute_spectral_features,
-    compute_tempo_features,
-    # compute_mel_spectrogram,
-    # compute_chromagram,
+    # compute_spectral_features,
+    # compute_tempo_features,
+    compute_mel_spectrogram,
+    compute_chromagram,
 ]
 model_creators = [
-    create_random_forest,
-    create_svm,
-    # create_resnet,
-    # create_densenet,
-    create_simple_feedforward_model,
+    # create_random_forest,
+    # create_svm,
+    create_resnet,
+    create_densenet,
+    # create_simple_feedforward_model,
     # create_complex_feedforward_model,
     # create_residual_cnn_model,
 ]
@@ -113,7 +113,7 @@ for splits, batch_size, lr, feature_extractor, model_creator in tqdm(
         model_creator=model_creator,
         epochs=100,
         batch_size=batch_size,
-        earlystop_patience=20,
+        earlystop_patience=15,
         learning_rate=lr,
         plot_confusion_matrix=False,
         liveplot_training=False,

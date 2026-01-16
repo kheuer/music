@@ -135,12 +135,12 @@ def pipeline(
                 verbose=0,
             )
 
-        # calculate loss & accuracy
-        logits = model.predict(X_test, batch_size=batch_size)
-        y_pred = np.argmax(logits, axis=1)
+            # calculate loss & accuracy
+            logits = model.predict(X_test, batch_size=batch_size)
+            y_pred = np.argmax(logits, axis=1)
 
-        loss_fn = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
-        loss = loss_fn(y_test, logits).numpy()
+            loss_fn = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False)
+            loss = loss_fn(y_test, logits).numpy()
 
     segment_accuracy = tf.reduce_mean(tf.cast(y_pred == y_test, tf.float32)).numpy()
     track_accuracy = majority_vote_by_id(y_test, y_pred, ids_test)
