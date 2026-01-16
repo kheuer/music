@@ -12,7 +12,9 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler
 import tensorflow as tf
 from tensorflow.keras import layers, models, regularizers
-from tensorflow.keras.applications.resnet import preprocess_input
+
+# from tensorflow.keras.applications.resnet import preprocess_input
+# from tensorflow.keras.applications.densenet import preprocess_input
 from features import (
     norm,
     compute_tempo_features,
@@ -82,9 +84,14 @@ def pipeline(
     assert len(X_val) == len(y_val)
     assert len(X_train) + len(X_test) + len(X_val) == len(df) * splits
 
-    (X_train, X_test, X_val) = norm(
-        X_train=X_train, X_test=X_test, X_val=X_val, feature_extractor=feature_extractor
-    )
+    # don't normalize for ResNet and DenseNet since we use preprocess_input
+    if model_creator not in [create_resnet, create_densenet]:
+        (X_train, X_test, X_val) = norm(
+            X_train=X_train,
+            X_test=X_test,
+            X_val=X_val,
+            feature_extractor=feature_extractor,
+        )
 
     # create model
     model = model_creator(X=X_train, learning_rate=learning_rate)
@@ -190,8 +197,13 @@ def _create_dense_or_resnet_model(
     x = layers.Resizing(224, 224)(inputs)
 
     # Adapter to 3 channels
-    x = layers.Conv2D(3, (1, 1), padding="same")(x)
-    x = layers.Lambda(preprocess_input)(x)
+    x = layers.Conv2D(3, (1, 1), padding="same", trainable=False)(x)
+    if base_model == tf.keras.applications.ResNet50V2:
+        x = tf.keras.applications.resnet.preprocess_input(x)
+    elif base_model == tf.keras.applications.DenseNet121:
+        x = tf.keras.applications.densenet.preprocess_input(x)
+    else:
+        raise ValueError("Unsupported base model")
 
     # Pretrained ResNet
     base_model = base_model(
@@ -199,14 +211,14 @@ def _create_dense_or_resnet_model(
         weights="imagenet",
     )
     base_model.trainable = False
-    for layer in base_model.layers[-10:]:
-        layer.trainable = True
+    # for layer in base_model.layers[-10:]:
+    #     layer.trainable = True
 
-    x = base_model(x)
+    x = base_model(x, training=False)
 
     x = layers.GlobalAveragePooling2D()(x)
-    x = layers.Dense(256, activation="relu")(x)
-    x = layers.Dropout(0.5)(x)
+    x = layers.Dense(64, activation="relu")(x)
+    # x = layers.Dropout(0.5)(x)
 
     outputs = layers.Dense(n_genres, activation="softmax")(x)
 
