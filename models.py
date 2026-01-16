@@ -382,7 +382,12 @@ def create_complex_feedforward_model(
 
 
 def create_svm(**kwargs) -> svm.SVC:
-    return svm.SVC()
+    return svm.SVC(
+        kernel=kwargs.get("kernel"),
+        C=kwargs.get("C"),
+        gamma=kwargs.get("gamma"),
+        class_weight=kwargs.get("class_weight"),
+    )
 
 
 def create_random_forest(
@@ -398,4 +403,6 @@ def create_random_forest(
         min_samples_leaf=min_samples_leaf,
         random_state=42,
         max_depth=max_depth,
+        class_weight=kwargs.get("class_weight"),
+        max_features=kwargs.get("max_features"),
     )
