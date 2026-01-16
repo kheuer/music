@@ -5,7 +5,7 @@
 ## Basic Approaches:
 ### Features:
 - tempo feature vector (7,) -> mean, median, std dev, min, max, unteres quartil, oberes quartil -> compute_tempo_features
-- spectral feature vector (7,11) (centroid, bandwidth, rolloff, contrast, flatness) -> mean, median, std dev, min, max, unteres quartil, oberes quartil -> compute_static_features
+- spectral feature vector (7,11) (centroid, bandwidth, rolloff, contrast, flatness) -> mean, median, std dev, min, max, unteres quartil, oberes quartil -> compute_spectral_features
 ### Models / Architecture:
 - SVM, Random Forest
 - Simple feedforward
