@@ -42,7 +42,7 @@ def load_file(file_path: str) -> np.ndarray:
     )
     padded_audio = augment(samples=padded_audio, sample_rate=params.sample_rate)
 
-    assert len(padded_audio) == 661500
+    assert len(padded_audio) == 1323000
     return padded_audio
 
 

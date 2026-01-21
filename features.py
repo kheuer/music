@@ -36,7 +36,7 @@ def compute_mel_spectrogram_64(y: np.ndarray):
 
 def compute_mel_spectrogram(y: np.ndarray, n_mels=40):
     mel_spectrogram = librosa.feature.melspectrogram(
-        y=y, sr=params.sample_rate, n_mels=n_mels, f_max=params.sample_rate // 2
+        y=y, sr=params.sample_rate, n_mels=n_mels, fmax=params.sample_rate // 2
     )
     mel_spectrogram_db = librosa.power_to_db(mel_spectrogram, ref=np.max)
     return mel_spectrogram_db
