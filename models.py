@@ -92,6 +92,14 @@ def pipeline(
             X_val=X_val,
             feature_extractor=feature_extractor,
         )
+    elif feature_extractor == compute_mel_spectrogram and model_creator in [
+        create_resnet,
+        create_densenet,
+    ]:
+        # mel-spectrogram needs rescaling from [-80,0] to [0,255]
+        X_train = (X_train + 80.0) * (255.0 / 80.0)
+        X_test = (X_test + 80.0) * (255.0 / 80.0)
+        X_val = (X_val + 80.0) * (255.0 / 80.0)
 
     # create model
     model = model_creator(X=X_train, learning_rate=learning_rate)
@@ -215,8 +223,11 @@ def _create_dense_or_resnet_model(
         weights="imagenet",
     )
     base_model.trainable = False
-    # for layer in base_model.layers[-10:]:
-    #     layer.trainable = True
+    for layer in base_model.layers[-10:]:
+        if not isinstance(layer, tf.keras.layers.BatchNormalization):
+            layer.trainable = True
+        else:
+            layer.trainable = False
 
     x = base_model(x, training=False)
 
