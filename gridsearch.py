@@ -8,6 +8,9 @@ from features import (
     compute_mel_spectrogram,
     compute_tempo_features,
     compute_spectral_features,
+    compute_mel_spectrogram_64,
+    compute_mel_spectrogram_128,
+    compute_mel_spectrogram_256,
 )
 from models import (
     pipeline,
@@ -28,16 +31,18 @@ feature_extractors = [
     # compute_spectral_features,
     # compute_tempo_features,
     compute_mel_spectrogram,
-    compute_chromagram,
+    compute_mel_spectrogram_64,
+    compute_mel_spectrogram_128,
+    compute_mel_spectrogram_256,
 ]
 model_creators = [
     # create_random_forest,
     # create_svm,
-    create_resnet,
-    create_densenet,
-    # create_simple_feedforward_model,
+    # create_resnet,
+    # create_densenet,
+    create_simple_feedforward_model,
     # create_complex_feedforward_model,
-    # create_residual_cnn_model,
+    create_residual_cnn_model,
 ]
 
 combinations = list(

@@ -9,6 +9,7 @@ import pandas as pd
 from tqdm import tqdm
 import librosa
 import params
+from audiomentations import Compose, AddGaussianNoise, TimeStretch, PitchShift, Shift
 
 
 random.seed(42)
@@ -31,6 +32,15 @@ def load_file(file_path: str) -> np.ndarray:
         padded_audio = np.pad(audio, (0, target_length - len(audio)), "constant")
     else:
         padded_audio = audio[:target_length]
+
+    augment = Compose(
+        [
+            AddGaussianNoise(min_amplitude=0.001, max_amplitude=0.03, p=0.5),
+            TimeStretch(min_rate=0.8, max_rate=1.2, p=0.5),
+            PitchShift(min_semitones=-2, max_semitones=2, p=0.5),
+        ]
+    )
+    padded_audio = augment(samples=padded_audio, sample_rate=params.sample_rate)
 
     assert len(padded_audio) == 661500
     return padded_audio
