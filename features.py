@@ -133,7 +133,7 @@ def norm(
     X_val: np.ndarray,
     feature_extractor: Callable,
 ):
-    if feature_extractor in (compute_mel_spectrogram, compute_chromagram):
+    if feature_extractor in (compute_mel_spectrogram, compute_chromagram, compute_mel_spectrogram_64, compute_mel_spectrogram_128, compute_mel_spectrogram_256):
         X_train_reshaped = X_train.transpose(0, 2, 1).reshape(-1, X_train.shape[1])
         X_test_reshaped = X_test.transpose(0, 2, 1).reshape(-1, X_test.shape[1])
         X_val_reshaped = X_val.transpose(0, 2, 1).reshape(-1, X_val.shape[1])
