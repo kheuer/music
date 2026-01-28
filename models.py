@@ -21,7 +21,6 @@ from features import (
     compute_mel_spectrogram,
     compute_chromagram,
     compute_spectral_features,
-    augment,
 )
 
 
@@ -80,6 +79,7 @@ def pipeline(
         splits=splits,
         train_size=train_size,
         test_size=test_size,
+        augmented=augmented,
     )
     assert isinstance(df, pd.DataFrame)
     assert isinstance(train_size, float)
@@ -92,11 +92,6 @@ def pipeline(
     assert isinstance(augmented, bool)
     assert isinstance(plot_confusion_matrix, bool)
     assert isinstance(liveplot_training, bool)
-
-    # only adjust train features
-    if augmented:
-        X_train = augment(X_train)
-
     assert len(X_train) == len(y_train)
     assert len(X_test) == len(y_test)
     assert len(X_val) == len(y_val)

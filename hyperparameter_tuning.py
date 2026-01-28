@@ -80,6 +80,7 @@ if __name__ == "__main__":
         splits=10,
         train_size=0.6,
         test_size=0.2,
+        augmented=False,
     )
     # normalize data
     X_train, X_test, X_val = norm(

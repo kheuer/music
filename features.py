@@ -23,7 +23,7 @@ from tensorflow.keras import layers, models
 from audiomentations import Compose, AddGaussianNoise, TimeStretch, PitchShift, Shift
 
 
-def augment(y: np.ndarray) -> np.ndarray:
+def perform_augmentation(y: np.ndarray) -> np.ndarray:
     augment_pipeline = Compose(
         [
             AddGaussianNoise(min_amplitude=0.001, max_amplitude=0.03, p=0.5),
