@@ -20,21 +20,21 @@ import librosa
 import params
 from IPython.display import clear_output
 from tensorflow.keras import layers, models
+from audiomentations import Compose, AddGaussianNoise, TimeStretch, PitchShift, Shift
 
 
-def compute_mel_spectrogram_256(y: np.ndarray):
-    return compute_mel_spectrogram(y, n_mels=256)
+def augment(y: np.ndarray) -> np.ndarray:
+    augment_pipeline = Compose(
+        [
+            AddGaussianNoise(min_amplitude=0.001, max_amplitude=0.03, p=0.5),
+            TimeStretch(min_rate=0.8, max_rate=1.2, p=0.5),
+            PitchShift(min_semitones=-2, max_semitones=2, p=0.5),
+        ]
+    )
+    return augment_pipeline(samples=y, sample_rate=params.sample_rate)
 
 
-def compute_mel_spectrogram_128(y: np.ndarray):
-    return compute_mel_spectrogram(y, n_mels=128)
-
-
-def compute_mel_spectrogram_64(y: np.ndarray):
-    return compute_mel_spectrogram(y, n_mels=64)
-
-
-def compute_mel_spectrogram(y: np.ndarray, n_mels=40):
+def compute_mel_spectrogram(y: np.ndarray, n_mels=128):
     mel_spectrogram = librosa.feature.melspectrogram(
         y=y, sr=params.sample_rate, n_mels=n_mels
     )
@@ -133,11 +133,14 @@ def norm(
     X_val: np.ndarray,
     feature_extractor: Callable,
 ):
-    if feature_extractor in (compute_mel_spectrogram, compute_chromagram, compute_mel_spectrogram_64, compute_mel_spectrogram_128, compute_mel_spectrogram_256):
+    scaler = StandardScaler()
+    if feature_extractor in (
+        compute_mel_spectrogram,
+        compute_chromagram,
+    ):
         X_train_reshaped = X_train.transpose(0, 2, 1).reshape(-1, X_train.shape[1])
         X_test_reshaped = X_test.transpose(0, 2, 1).reshape(-1, X_test.shape[1])
         X_val_reshaped = X_val.transpose(0, 2, 1).reshape(-1, X_val.shape[1])
-        scaler = StandardScaler()
         scaler.fit(X_train_reshaped)
         X_train_norm = scaler.transform(X_train_reshaped)
         X_test_norm = scaler.transform(X_test_reshaped)
@@ -147,14 +150,12 @@ def norm(
         X_val_norm = X_val_norm.reshape(X_val.shape).transpose(0, 1, 2)
 
     elif feature_extractor == compute_tempo_features:
-        scaler = StandardScaler()
         scaler.fit(X_train)
         X_train_norm = scaler.transform(X_train)
         X_test_norm = scaler.transform(X_test)
         X_val_norm = scaler.transform(X_val)
 
     elif feature_extractor == compute_spectral_features:
-        scaler = StandardScaler()
         # expected (n_samples, 7, 11)
         n_samples, dim1, dim2 = X_train.shape
         X_train_reshaped = X_train.reshape(n_samples, dim1 * dim2)
@@ -163,7 +164,6 @@ def norm(
         n_samples, dim1, dim2 = X_val.shape
         X_val_reshaped = X_val.reshape(n_samples, dim1 * dim2)
 
-        scaler = StandardScaler()
         scaler.fit(X_train_reshaped)
         X_train_norm = scaler.transform(X_train_reshaped)
         X_test_norm = scaler.transform(X_test_reshaped)
