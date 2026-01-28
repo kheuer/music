@@ -108,16 +108,16 @@ for augmented, splits, batch_size, lr, feature_extractor, model_creator in combi
         continue
 
     unsaved_combinations.append(
-        (splits, batch_size, lr, feature_extractor, model_creator)
+        (augmented, splits, batch_size, lr, feature_extractor, model_creator)
     )
 
 
-for splits, batch_size, lr, feature_extractor, model_creator in tqdm(
+for augmented, splits, batch_size, lr, feature_extractor, model_creator in tqdm(
     unsaved_combinations, total=len(unsaved_combinations), desc="Gridsearch Loop"
 ):
 
     print(
-        f"Running: splits={splits}, batch_size={batch_size}, lr={lr}, feature_extractor={feature_extractor.__name__}, model_creator={model_creator.__name__}"
+        f"Running: augmented={augmented} splits={splits}, batch_size={batch_size}, lr={lr}, feature_extractor={feature_extractor.__name__}, model_creator={model_creator.__name__}"
     )
     model, history, loss, segment_accuracy, track_accuracy, recall, f1 = pipeline(
         df=df,
