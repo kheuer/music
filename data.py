@@ -32,7 +32,7 @@ def load_file(file_path: str) -> np.ndarray:
     else:
         padded_audio = audio[:target_length]
 
-    assert len(padded_audio) == 661500
+    assert len(padded_audio) == 1323000
     return padded_audio
 
 

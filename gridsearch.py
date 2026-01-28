@@ -21,28 +21,34 @@ from models import (
 )
 from data import df
 
-splits_list = [10, 3]
+splits_list = [10]
 batch_sizes = [256]
 learning_rates = [0.0001]
 feature_extractors = [
-    # compute_spectral_features,
-    # compute_tempo_features,
-    compute_mel_spectrogram,
-    compute_chromagram,
+    compute_spectral_features,
+    compute_tempo_features,
+    # compute_chromagram,
+    # compute_mel_spectrogram,
 ]
 model_creators = [
-    # create_random_forest,
-    # create_svm,
-    create_resnet,
-    create_densenet,
-    # create_simple_feedforward_model,
+    create_random_forest,
+    create_svm,
+    create_simple_feedforward_model,
+    # create_resnet,
+    # create_densenet,
     # create_complex_feedforward_model,
     # create_residual_cnn_model,
 ]
 
+augmentations = [False, True]
 combinations = list(
     itertools.product(
-        splits_list, batch_sizes, learning_rates, feature_extractors, model_creators
+        augmentations,
+        splits_list,
+        batch_sizes,
+        learning_rates,
+        feature_extractors,
+        model_creators,
     )
 )
 
@@ -53,6 +59,7 @@ if os.path.exists(output_file):
 else:
     results_df = pd.DataFrame(
         columns=[
+            "augmented",
             "splits",
             "batch_size",
             "learning_rate",
@@ -69,14 +76,22 @@ else:
 completed = set(
     tuple(x)
     for x in results_df[
-        ["splits", "batch_size", "learning_rate", "feature_extractor", "model_creator"]
+        [
+            "augmented",
+            "splits",
+            "batch_size",
+            "learning_rate",
+            "feature_extractor",
+            "model_creator",
+        ]
     ].values
 )
 
 
 unsaved_combinations = []
-for splits, batch_size, lr, feature_extractor, model_creator in combinations:
+for augmented, splits, batch_size, lr, feature_extractor, model_creator in combinations:
     if (
+        augmented,
         splits,
         batch_size,
         lr,
@@ -106,15 +121,16 @@ for splits, batch_size, lr, feature_extractor, model_creator in tqdm(
     )
     model, history, loss, segment_accuracy, track_accuracy, recall, f1 = pipeline(
         df=df,
-        train_size=0.6,
-        test_size=0.2,
+        train_size=0.8,
+        test_size=0.1,
         splits=splits,
         feature_extractor=feature_extractor,
         model_creator=model_creator,
-        epochs=100,
+        epochs=70,
         batch_size=batch_size,
         earlystop_patience=15,
         learning_rate=lr,
+        augmented=augmented,
         plot_confusion_matrix=False,
         liveplot_training=False,
     )
@@ -125,6 +141,7 @@ for splits, batch_size, lr, feature_extractor, model_creator in tqdm(
             pd.DataFrame(
                 [
                     {
+                        "augmented": augmented,
                         "splits": splits,
                         "batch_size": batch_size,
                         "learning_rate": lr,

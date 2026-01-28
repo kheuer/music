@@ -21,6 +21,7 @@ from features import (
     compute_mel_spectrogram,
     compute_chromagram,
     compute_spectral_features,
+    augment,
 )
 
 
@@ -64,7 +65,8 @@ def pipeline(
     epochs: int,
     batch_size: int,
     earlystop_patience: int,
-    learning_rate: int,
+    learning_rate: float,
+    augmented: bool,
     plot_confusion_matrix: bool = True,
     liveplot_training: bool = False,
 ):
@@ -79,10 +81,30 @@ def pipeline(
         train_size=train_size,
         test_size=test_size,
     )
+    assert isinstance(df, pd.DataFrame)
+    assert isinstance(train_size, float)
+    assert isinstance(test_size, float)
+    assert isinstance(splits, int)
+    assert isinstance(epochs, int)
+    assert isinstance(batch_size, int)
+    assert isinstance(earlystop_patience, int)
+    assert isinstance(learning_rate, float)
+    assert isinstance(augmented, bool)
+    assert isinstance(plot_confusion_matrix, bool)
+    assert isinstance(liveplot_training, bool)
+
+    # only adjust train features
+    if augmented:
+        X_train = augment(X_train)
+
     assert len(X_train) == len(y_train)
     assert len(X_test) == len(y_test)
     assert len(X_val) == len(y_val)
     assert len(X_train) + len(X_test) + len(X_val) == len(df) * splits
+
+    def assert_scaling(X: np.ndarray) -> bool:
+        assert X.max() <= 255
+        assert X.min() >= 0
 
     # don't normalize for ResNet and DenseNet since we use preprocess_input
     if model_creator not in [create_resnet, create_densenet]:
@@ -92,6 +114,29 @@ def pipeline(
             X_val=X_val,
             feature_extractor=feature_extractor,
         )
+    elif feature_extractor == compute_mel_spectrogram and model_creator in [
+        create_resnet,
+        create_densenet,
+    ]:
+        # mel-spectrogram needs rescaling from [-80,0] to [0,255]
+        X_train = (X_train + 80.0) * (255.0 / 80.0)
+        X_test = (X_test + 80.0) * (255.0 / 80.0)
+        X_val = (X_val + 80.0) * (255.0 / 80.0)
+
+        assert_scaling(X_train)
+        assert_scaling(X_test)
+        assert_scaling(X_val)
+
+    elif feature_extractor == compute_chromagram and model_creator in [
+        create_resnet,
+        create_densenet,
+    ]:
+        X_train *= 255.0
+        X_test *= 255.0
+        X_val *= 255.0
+        assert_scaling(X_train)
+        assert_scaling(X_test)
+        assert_scaling(X_val)
 
     # create model
     model = model_creator(X=X_train, learning_rate=learning_rate)
@@ -195,11 +240,7 @@ def _create_dense_or_resnet_model(
 
     # Resize height to meet ResNet constraints
     x = layers.Resizing(224, 224)(inputs)
-    if X.min() < 0:
-        # Mel-spectrogram [-80, 0] → [0,255]
-        print("Rescaling mel-spectrogram input")
-        x = layers.Rescaling(255.0 / 80.0, offset=255.0)(x)
-        # else Chromagram [0,1] → leave as-is
+
     # Adapter to 3 channels
     x = layers.Conv2D(3, (1, 1), padding="same", trainable=False)(x)
     if base_model == tf.keras.applications.ResNet50V2:
@@ -215,8 +256,11 @@ def _create_dense_or_resnet_model(
         weights="imagenet",
     )
     base_model.trainable = False
-    # for layer in base_model.layers[-10:]:
-    #     layer.trainable = True
+    for layer in base_model.layers[-10:]:
+        if not isinstance(layer, tf.keras.layers.BatchNormalization):
+            layer.trainable = True
+        else:
+            layer.trainable = False
 
     x = base_model(x, training=False)
 
@@ -382,12 +426,7 @@ def create_complex_feedforward_model(
 
 
 def create_svm(**kwargs) -> svm.SVC:
-    return svm.SVC(
-        kernel=kwargs.get("kernel"),
-        C=kwargs.get("C"),
-        gamma=kwargs.get("gamma"),
-        class_weight=kwargs.get("class_weight"),
-    )
+    return svm.SVC()
 
 
 def create_random_forest(
@@ -403,6 +442,4 @@ def create_random_forest(
         min_samples_leaf=min_samples_leaf,
         random_state=42,
         max_depth=max_depth,
-        class_weight=kwargs.get("class_weight"),
-        max_features=kwargs.get("max_features"),
     )
