@@ -25,19 +25,19 @@ splits_list = [10]
 batch_sizes = [256]
 learning_rates = [0.0001]
 feature_extractors = [
-    compute_spectral_features,
-    compute_tempo_features,
-    # compute_chromagram,
-    # compute_mel_spectrogram,
+    # compute_spectral_features,
+    # compute_tempo_features,
+    compute_chromagram,
+    compute_mel_spectrogram,
 ]
 model_creators = [
-    create_random_forest,
-    create_svm,
-    create_simple_feedforward_model,
+    # create_random_forest,
+    # create_svm,
+    # create_simple_feedforward_model,
     # create_resnet,
-    # create_densenet,
-    # create_complex_feedforward_model,
-    # create_residual_cnn_model,
+    create_densenet,
+    create_complex_feedforward_model,
+    create_residual_cnn_model,
 ]
 
 augmentations = [False, True]
